@@ -73,8 +73,8 @@ jobs:
               "https://terubea82-eng.github.io/Pacific-education-pilot-preview/"
           )
           html = html.replace(
-              'navigator.serviceWorker.register("../service-worker.js"',
-              'navigator.serviceWorker.register("./service-worker.js"'
+              'serviceWorker.register("../service-worker.js"',
+              'serviceWorker.register("./service-worker.js"'
           )
           html = html.replace(
               "https://terubea82-eng.github.io/Pacific-education-/src/index.html",
