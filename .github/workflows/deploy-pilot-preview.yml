@@ -1,0 +1,109 @@
+name: Deploy PacEdu Pilot Preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-pilot-preview.yml"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pacedu-pilot-preview-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pilot preview repository
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned PacEdu staging source
+        uses: actions/checkout@v4
+        with:
+          repository: terubea82-eng/Pacific-education-
+          ref: 5e7c92c04bdc9a6b4bcc5040e5dc37c906a55c84
+          path: source
+          persist-credentials: false
+
+      - name: Assemble isolated pilot site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp -a source/src _site/src
+          cp -a source/js _site/js
+          cp -a source/icons _site/icons
+          cp source/manifest.webmanifest _site/manifest.webmanifest
+          touch _site/.nojekyll
+
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta name="robots" content="noindex,nofollow">
+            <meta http-equiv="refresh" content="0;url=./src/business-advertising.html">
+            <title>PacEdu Pilot Preview</title>
+          </head>
+          <body>
+            <p>Opening the PacEdu pilot preview…</p>
+            <p><a href="./src/business-advertising.html">Continue to PacEdu</a></p>
+          </body>
+          </html>
+          HTML
+
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("_site")
+          index = root / "src/index.html"
+          html = index.read_text()
+          html = html.replace(
+              "https://terubea82-eng.github.io/Pacific-education-/",
+              "https://terubea82-eng.github.io/Pacific-education-pilot-preview/"
+          )
+          html = html.replace(
+              'navigator.serviceWorker.register("../service-worker.js"',
+              'navigator.serviceWorker.register("./service-worker.js"'
+          )
+          html = html.replace(
+              "https://terubea82-eng.github.io/Pacific-education-/src/index.html",
+              "https://terubea82-eng.github.io/Pacific-education-pilot-preview/src/index.html"
+          )
+          index.write_text(html)
+
+          manifest = root / "manifest.webmanifest"
+          data = manifest.read_text().replace(
+              "/Pacific-education-/", "/Pacific-education-pilot-preview/"
+          )
+          manifest.write_text(data)
+          PY
+
+          test -f _site/src/business-advertising.html
+          test -f _site/src/index.html
+          test -f _site/src/js/paceduBusinessAdvertising.js
+          test -f _site/js/pacificEducationCore.js
+          test -f _site/icons/pacific-education-192.svg
+          echo "PASS: isolated pilot site assembled from pinned staging source."
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload pilot site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy pilot preview only
+        id: deployment
+        uses: actions/deploy-pages@v4
