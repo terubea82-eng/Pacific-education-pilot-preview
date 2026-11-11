@@ -31,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: terubea82-eng/Pacific-education-
-          ref: 15c45ffff79c7cc0f5feab49cb5f63ea4dff21de
+          ref: 7f27bcd8fd34dae94c26a070551db83ce322f413
           path: source
           persist-credentials: false
 
